@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Investment Calculator: Compare the returns on a rental property versus an index fund over time. Find out when your property investment's equity builds up to the point where index fund investments may yield better returns.">
+    <meta name="keywords" content="investment calculator, rental property returns, index fund returns, property equity, breakeven point">
+    <meta name="author" content="Your Name">
+    <title>Investment Calculator - Property vs. Index Fund</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Investment Calculator: Property vs. Index Fund</h1>
+        <p class="mb-4">Welcome to the Investment Calculator: Property vs. Index Fund. This tool is designed to help you make informed decisions about your investments by comparing the returns on a rental property to those from an index fund over time.</p>
+
+        <p class="mb-4">When you invest in a rental property, you build equity as the property value appreciates and as you pay down the mortgage. However, managing a rental property involves costs such as upkeep, maintenance, and mortgage payments. On the other hand, investing in an index fund offers potentially steady returns with less hassle, as it tracks the performance of a specific market index.</p>
+
+        <p class="mb-4">This calculator allows you to input key parameters such as the total cost of the property, down payment, mortgage interest rate, mortgage term (15 or 30 years), property appreciation rate, monthly rent, estimated monthly costs, and the annual return rate of an index fund. By simulating the financial performance of both investments over time, the tool helps you identify the breakeven point where the property investment's equity builds up to the point that the proportional returns may decrease compared to an index fund.</p>
+
+        <p class="mb-4">With this information, you can determine when it might make sense to shift your investment strategy from real estate to the stock market, maximizing your financial gains and minimizing effort. Use this tool to make smarter investment choices and plan your financial future with confidence.</p>
+
+        <form id="investmentForm">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="totalCost" class="form-label">Total Cost of Property</label>
+                    <input type="number" class="form-control" id="totalCost" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="downPayment" class="form-label">Down Payment</label>
+                    <input type="number" class="form-control" id="downPayment" required>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="interestRate" class="form-label">Mortgage Interest Rate (%)</label>
+                    <input type="number" step="0.01" class="form-control" id="interestRate" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="mortgageYears" class="form-label">Mortgage Term (Years)</label>
+                    <select class="form-select" id="mortgageYears" required>
+                        <option value="15">15</option>
+                        <option value="30">30</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="appreciationRate" class="form-label">Property Appreciation Rate (%)</label>
+                    <input type="number" step="0.01" class="form-control" id="appreciationRate" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="monthlyRent" class="form-label">Monthly Rent</label>
+                    <input type="number" class="form-control" id="monthlyRent" required>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="monthlyCosts" class="form-label">Estimated Monthly Costs (Upkeep/Maintenance)</label>
+                    <input type="number" class="form-control" id="monthlyCosts" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="indexFundRate" class="form-label">Index Fund Annual Return Rate (%)</label>
+                    <input type="number" step="0.01" class="form-control" id="indexFundRate" required>
+                </div>
+            </div>
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary">Calculate</button>
+            </div>
+        </form>
+
+        <div class="mt-5">
+            <h3>Investment Comparison</h3>
+            <canvas id="investmentChart"></canvas>
+        </div>
+        <div id="tableContainer" class="mt-5"></div>
+    </div>
+    <script>
+        let investmentChart;
+
+        document.getElementById('investmentForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            // Retrieve input values
+            const totalCost = parseFloat(document.getElementById('totalCost').value);
+            const downPayment = parseFloat(document.getElementById('downPayment').value);
+            const interestRate = parseFloat(document.getElementById('interestRate').value) / 100;
+            const mortgageYears = parseInt(document.getElementById('mortgageYears').value);
+            const appreciationRate = parseFloat(document.getElementById('appreciationRate').value) / 100;
+            const monthlyRent = parseFloat(document.getElementById('monthlyRent').value);
+            const monthlyCosts = parseFloat(document.getElementById('monthlyCosts').value);
+            const indexFundRate = parseFloat(document.getElementById('indexFundRate').value) / 100;
+
+            // Calculate monthly mortgage payment using the formula for a fixed-rate mortgage
+            const loanAmount = totalCost - downPayment;
+            const monthlyInterestRate = interestRate / 12;
+            const numberOfPayments = mortgageYears * 12;
+            const monthlyMortgagePayment = loanAmount * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, numberOfPayments) / (Math.pow(1 + monthlyInterestRate, numberOfPayments) - 1);
+
+            // Initialize arrays to hold the data for plotting
+            const years = [];
+            const propertyReturns = [];
+            const indexFundReturns = [];
+            const totalPropertyValues = [];
+            const totalInvestmentValues = [];
+            const annualRent = monthlyRent * 12;
+            const annualCosts = monthlyCosts * 12;
+
+            // Initial investment for index fund is the down payment
+            let indexFundValue = downPayment;
+            let previousPropertyValue = totalCost;
+            let previousMortgageBalance = loanAmount;
+
+            for (let year = 1; year <= mortgageYears; year++) {
+                years.push(year);
+
+                // Calculate property value and equity over time
+                const propertyValue = previousPropertyValue * (1 + appreciationRate);
+                const remainingMortgageBalance = previousMortgageBalance * Math.pow(1 + monthlyInterestRate, 12) - monthlyMortgagePayment * (Math.pow(1 + monthlyInterestRate, 12) - 1) / monthlyInterestRate;
+                const equity = propertyValue - remainingMortgageBalance;
+
+                // Calculate net returns from property
+                const totalRentIncome = annualRent;
+                const totalCosts = annualCosts + monthlyMortgagePayment * 12;
+                const propertyReturn = totalRentIncome + (propertyValue - previousPropertyValue) - totalCosts;
+                propertyReturns.push(propertyReturn);
+
+                // Store total property value
+                totalPropertyValues.push(equity);
+
+                // Calculate index fund value over time
+                const indexFundReturn = indexFundValue * indexFundRate;
+                indexFundReturns.push(indexFundReturn);
+                indexFundValue += indexFundReturn;
+
+                // Store total investment value
+                totalInvestmentValues.push(indexFundValue);
+
+                // Update previous values for next iteration
+                previousPropertyValue = propertyValue;
+                previousMortgageBalance = remainingMortgageBalance;
+            }
+
+            // Check if the chart already exists
+            if (investmentChart) {
+                // Update the existing chart
+                investmentChart.data.labels = years;
+                investmentChart.data.datasets[0].data = propertyReturns;
+                investmentChart.data.datasets[1].data = indexFundReturns;
+                investmentChart.update();
+            } else {
+                // Create a new chart
+                const ctx = document.getElementById('investmentChart').getContext('2d');
+                investmentChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: years,
+                        datasets: [
+                            {
+                                label: 'Property Returns',
+                                data: propertyReturns,
+                                borderColor: 'rgb(75, 192, 192)',
+                                fill: false
+                            },
+                            {
+                                label: 'Index Fund Returns',
+                                data: indexFundReturns,
+                                borderColor: 'rgb(255, 99, 132)',
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        title: {
+                            display: true,
+                            text: 'Year-over-Year Investment Returns'
+                        },
+                        tooltips: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        hover: {
+                            mode: 'nearest',
+                            intersect: true
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Years'
+                                }
+                            },
+                            y: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Returns ($)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Create the table
+            const tableContainer = document.getElementById('tableContainer');
+            tableContainer.innerHTML = ''; // Clear any existing table
+
+            const table = document.createElement('table');
+            table.className = 'table table-striped mt-4';
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+
+            // Create table headers
+            const headers = ['Year', 'Total Value of Real Estate Portfolio', 'Total Value of Investment Portfolio', 'Year Returns for Real Estate Portfolio', 'Year Returns for Investment Portfolio'];
+            const headerRow = document.createElement('tr');
+            headers.forEach(headerText => {
+                const th = document.createElement('th');
+                th.textContent = headerText;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+
+            // Populate table rows
+            for (let i = 0; i < years.length; i++) {
+                const row = document.createElement('tr');
+                const yearCell = document.createElement('td');
+                yearCell.textContent = years[i];
+                row.appendChild(yearCell);
+
+                const totalPropertyValueCell = document.createElement('td');
+                totalPropertyValueCell.textContent = totalPropertyValues[i].toFixed(2);
+                row.appendChild(totalPropertyValueCell);
+
+                const totalInvestmentValueCell = document.createElement('td');
+                totalInvestmentValueCell.textContent = totalInvestmentValues[i].toFixed(2);
+                row.appendChild(totalInvestmentValueCell);
+
+                const propertyReturnCell = document.createElement('td');
+                propertyReturnCell.textContent = propertyReturns[i].toFixed(2);
+                row.appendChild(propertyReturnCell);
+
+                const indexFundReturnCell = document.createElement('td');
+                indexFundReturnCell.textContent = indexFundReturns[i].toFixed(2);
+                row.appendChild(indexFundReturnCell);
+
+                tbody.appendChild(row);
+            }
+
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            tableContainer.appendChild(table);
+        });
+    </script>
+</body>
+</html>
+
