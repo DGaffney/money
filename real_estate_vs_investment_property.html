@@ -232,19 +232,19 @@
                 row.appendChild(yearCell);
 
                 const totalPropertyValueCell = document.createElement('td');
-                totalPropertyValueCell.textContent = totalPropertyValues[i].toFixed(2);
+                totalPropertyValueCell.textContent = "$"+totalPropertyValues[i].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 row.appendChild(totalPropertyValueCell);
 
                 const totalInvestmentValueCell = document.createElement('td');
-                totalInvestmentValueCell.textContent = totalInvestmentValues[i].toFixed(2);
+                totalInvestmentValueCell.textContent = "$"+totalInvestmentValues[i].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 row.appendChild(totalInvestmentValueCell);
 
                 const propertyReturnCell = document.createElement('td');
-                propertyReturnCell.textContent = propertyReturns[i].toFixed(2);
+                propertyReturnCell.textContent = "$"+propertyReturns[i].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 row.appendChild(propertyReturnCell);
 
                 const indexFundReturnCell = document.createElement('td');
-                indexFundReturnCell.textContent = indexFundReturns[i].toFixed(2);
+                indexFundReturnCell.textContent = "$"+indexFundReturns[i].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 row.appendChild(indexFundReturnCell);
 
                 tbody.appendChild(row);
@@ -254,6 +254,7 @@
             table.appendChild(tbody);
             tableContainer.appendChild(table);
         });
+
     </script>
 </body>
 </html>
